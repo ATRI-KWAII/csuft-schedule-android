@@ -1,0 +1,45 @@
+# Android / Java build outputs
+build/
+dist/
+out/
+.gradle/
+*.apk
+*.apks
+*.aab
+*.dex
+*.class
+*.idsig
+
+# Signing material — never commit private keys
+*.keystore
+*.jks
+*.p12
+*.pem
+key.properties
+
+# Local SDK and machine-specific configuration
+local.properties
+work/
+android-sdk/
+
+# Authentication and local response data
+.env
+.env.*
+sms-session.json
+sms-cookies.txt
+*-private.json
+*cookies*.txt
+
+# IDE / editor files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Logs and operating-system files
+*.log
+hs_err_pid*
+.DS_Store
+Thumbs.db
+Desktop.ini
