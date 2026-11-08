@@ -38,6 +38,7 @@ public final class MainActivity extends Activity {
     private static final String KEY_TOKEN = "id_token";
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService weatherExecutor = Executors.newSingleThreadExecutor();
     private SharedPreferences preferences;
     private ApiClient api;
     private Calendar selectedDate = Calendar.getInstance();
@@ -57,6 +58,9 @@ public final class MainActivity extends Activity {
     private ApiClient.CourseBundle currentBundle;
     private boolean showingWeek = true;
     private int requestVersion;
+    private int weatherVersion;
+    private TextView weekWeather;
+    private TextView calendarWeather;
 
     @Override
     public void onCreate(Bundle state) {
@@ -76,11 +80,13 @@ public final class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         executor.shutdownNow();
+        weatherExecutor.shutdownNow();
         super.onDestroy();
     }
 
     private void showLogin() {
         requestVersion++;
+        weatherVersion++;
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         LinearLayout panel = column(0);
@@ -236,6 +242,7 @@ public final class MainActivity extends Activity {
         setContentView(root);
         updateWeekLabel();
         showModule(true);
+        loadWeather();
         if (loadImmediately) loadCourses();
     }
 
@@ -260,8 +267,9 @@ public final class MainActivity extends Activity {
         toolbar.addView(weekRefresh, spaced(0, 0, 8, 0));
         toolbar.addView(settings);
         header.addView(toolbar, matchWrap());
-        header.addView(Ui.text(this, "七列周视图 · 点击日期范围回到本周", 12, Ui.WHITE_SOFT, false),
-                spaced(1, 5, 0, 0));
+        weekWeather = Ui.text(this, "长沙校区附近（固定地点）  天气加载中…", 12, Ui.WHITE_SOFT, false);
+        weekWeather.setOnClickListener(view -> loadWeather());
+        header.addView(weekWeather, spaced(1, 5, 0, 0));
         panel.addView(header, matchWrap());
 
         LinearLayout weekPicker = new LinearLayout(this);
@@ -295,7 +303,7 @@ public final class MainActivity extends Activity {
         previous.setOnClickListener(view -> { selectedDate.add(Calendar.DAY_OF_MONTH, -7); updateWeekLabel(); loadCourses(); });
         next.setOnClickListener(view -> { selectedDate.add(Calendar.DAY_OF_MONTH, 7); updateWeekLabel(); loadCourses(); });
         weekRangeLabel.setOnClickListener(view -> { selectedDate = Calendar.getInstance(); updateWeekLabel(); loadCourses(); });
-        weekRefresh.setOnClickListener(view -> loadCourses());
+        weekRefresh.setOnClickListener(view -> { loadCourses(); loadWeather(); });
         settings.setOnClickListener(view -> showSettings());
         return panel;
     }
@@ -310,8 +318,9 @@ public final class MainActivity extends Activity {
         toolbar.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout titles = column(0);
         titles.addView(Ui.text(this, "日历", 24, Color.WHITE, true), matchWrap());
-        titles.addView(Ui.text(this, semesterLabel(Calendar.getInstance()) + " 学期", 13, Ui.WHITE_SOFT, false),
-                spacedMatch(0, 4, 0, 0, ViewGroup.LayoutParams.WRAP_CONTENT));
+        calendarWeather = Ui.text(this, "长沙校区附近（固定地点）  天气加载中…", 12, Ui.WHITE_SOFT, false);
+        calendarWeather.setOnClickListener(view -> loadWeather());
+        titles.addView(calendarWeather, spacedMatch(0, 4, 0, 0, ViewGroup.LayoutParams.WRAP_CONTENT));
         toolbar.addView(titles, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         calendarRefresh = pillButton("刷新", Color.WHITE, Ui.GLASS);
         Button settings = pillButton("设置", Color.WHITE, Ui.GLASS);
@@ -330,7 +339,7 @@ public final class MainActivity extends Activity {
         scroll.addView(calendarContent, matchWrap());
         panel.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
         renderCalendar(null);
-        calendarRefresh.setOnClickListener(view -> loadCourses());
+        calendarRefresh.setOnClickListener(view -> { loadCourses(); loadWeather(); });
         settings.setOnClickListener(view -> showSettings());
         return panel;
     }
@@ -382,6 +391,29 @@ public final class MainActivity extends Activity {
         view.setTextColor(selected ? Ui.GREEN : Ui.INK_SOFT);
         view.setBackground(Ui.rounded(this, selected ? Ui.GREEN_TINT : Color.TRANSPARENT,
                 18, Color.TRANSPARENT));
+    }
+
+    private void loadWeather() {
+        final int version = ++weatherVersion;
+        updateWeatherText("长沙校区附近（固定地点）  天气加载中…");
+        weatherExecutor.execute(() -> {
+            String result;
+            try {
+                result = WeatherClient.fetch() + "  ·  Open-Meteo";
+            } catch (Exception error) {
+                result = "长沙校区附近（固定地点）  天气暂不可用，点击重试";
+            }
+            final String display = result;
+            runOnUiThread(() -> {
+                if (version != weatherVersion || isFinishing() || isDestroyed()) return;
+                updateWeatherText(display);
+            });
+        });
+    }
+
+    private void updateWeatherText(String value) {
+        if (weekWeather != null) weekWeather.setText(value);
+        if (calendarWeather != null) calendarWeather.setText(value);
     }
 
     private void loadCourses() {

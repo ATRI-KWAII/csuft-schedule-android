@@ -44,7 +44,7 @@ $Keystore = Join-Path $BuildDir 'schedule-debug.keystore'
 if (-not (Test-Path -LiteralPath $Keystore)) {
     & keytool -genkeypair -keystore $Keystore -storepass android -keypass android -alias schedule -dname 'CN=Local Development,O=Codex,C=CN' -keyalg RSA -keysize 2048 -validity 3650
 }
-$Apk = Join-Path $OutputDir 'schedule-lite-1.6.apk'
+$Apk = Join-Path $OutputDir 'schedule-lite-1.7.apk'
 $SignedApk = Join-Path $BuildDir 'signed.apk'
 & (Join-Path $BuildTools 'apksigner.bat') sign --ks $Keystore --ks-key-alias schedule --ks-pass pass:android --key-pass pass:android --out $SignedApk (Join-Path $BuildDir 'aligned.apk')
 & (Join-Path $BuildTools 'apksigner.bat') verify --verbose $SignedApk
